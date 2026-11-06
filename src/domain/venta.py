@@ -2,6 +2,9 @@ from datetime import datetime
 from typing import List, Optional
 from src.domain.value_objects import RecetaMedica
 from src.domain.exceptions import DatosDeRecetaIncompletosError, VentaYaCerradaError
+from src.domain.specifications import VentaConProductos, VentaConRecetaCompleta
+from src.domain.state_machine import EstadoVenta, MAQUINA_VENTA
+
 
 class LineaVenta:
     def __init__(self, id_producto: str, id_lote: str, cantidad: int, precio_unitario: float, requiere_receta: bool = False):
@@ -15,6 +18,7 @@ class LineaVenta:
     def subtotal(self) -> float:
         return round(self.cantidad * self.precio_unitario, 2)
 
+
 class Venta:
     def __init__(self, id_venta: str, id_sucursal: str, id_cajero: str):
         self.id_venta = id_venta
@@ -22,8 +26,12 @@ class Venta:
         self.id_cajero = id_cajero
         self.lineas: List[LineaVenta] = []
         self.receta: Optional[RecetaMedica] = None
-        self.completada: bool = False
+        self.estado: EstadoVenta = EstadoVenta.ABIERTA
         self.fecha_cierre: Optional[datetime] = None
+
+    @property
+    def completada(self) -> bool:
+        return self.estado == EstadoVenta.COMPLETADA
 
     def agregar_linea(self, id_producto: str, id_lote: str, cantidad: int, precio_unitario: float, requiere_receta: bool = False):
         if self.completada:
@@ -41,9 +49,10 @@ class Venta:
     def completar_venta(self, fecha_hora: datetime):
         if self.completada:
             raise VentaYaCerradaError()
-        if not self.lineas:
-            raise ValueError("No se puede completar una venta sin productos.")
-        if any(l.requiere_receta for l in self.lineas) and self.receta is None:
-            raise DatosDeRecetaIncompletosError("Medicamentos controlados requieren receta.")
-        self.completada = True
+        if not VentaConProductos().is_satisfied_by(self):
+            raise ValueError(VentaConProductos.mensaje)
+        if not VentaConRecetaCompleta().is_satisfied_by(self):
+            raise DatosDeRecetaIncompletosError(VentaConRecetaCompleta.mensaje)
+        MAQUINA_VENTA.validar(self.estado, EstadoVenta.COMPLETADA)
+        self.estado = EstadoVenta.COMPLETADA
         self.fecha_cierre = fecha_hora

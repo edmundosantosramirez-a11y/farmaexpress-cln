@@ -15,3 +15,9 @@ class DatosDeRecetaIncompletosError(ReglaDeNegocioExcepcion):
 
 class VentaYaCerradaError(ReglaDeNegocioExcepcion):
     pass
+
+class LoteEnCuarentenaError(ReglaDeNegocioExcepcion):
+    pass
+
+class TransicionInvalidaError(ReglaDeNegocioExcepcion):
+    pass

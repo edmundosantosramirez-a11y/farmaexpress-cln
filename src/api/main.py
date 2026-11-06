@@ -1,3 +1,5 @@
+from src.domain.specifications import LoteVendible
+from src.application.handlers import PonerLoteEnCuarentenaHandler, LiberarCuarentenaHandler
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from datetime import date, datetime
@@ -99,6 +101,40 @@ def retirar_lote(id_lote: str, dto: RetirarLoteDTO):
         return {"mensaje": f"Lote {id_lote} retirado del mercado"}
     except ReglaDeNegocioExcepcion as e:
         raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/lotes/{id_lote}/cuarentena", summary="CU-04: Poner lote en cuarentena")
+def poner_en_cuarentena(id_lote: str):
+    try:
+        PonerLoteEnCuarentenaHandler(uow).ejecutar(id_lote)
+        return {"mensaje": f"Lote {id_lote} en cuarentena"}
+    except ReglaDeNegocioExcepcion as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.post("/lotes/{id_lote}/liberar", summary="CU-04: Liberar lote de cuarentena")
+def liberar_cuarentena(id_lote: str):
+    try:
+        LiberarCuarentenaHandler(uow).ejecutar(id_lote)
+        return {"mensaje": f"Lote {id_lote} liberado"}
+    except ReglaDeNegocioExcepcion as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@app.get("/lotes/{id_lote}", summary="Consultar lote (estado y si es vendible hoy)")
+def consultar_lote(id_lote: str):
+    lote = uow.lotes.obtener_por_id(id_lote)
+    if not lote:
+        raise HTTPException(status_code=404, detail="Lote no encontrado.")
+    spec = LoteVendible(date.today())
+    return {
+        "id_lote": lote.id_lote,
+        "estado": getattr(lote.estado, "value", lote.estado),
+        "stock": lote.stock,
+        "fecha_caducidad": lote.fecha_caducidad.isoformat(),
+        "vendible": spec.is_satisfied_by(lote),
+        "motivo_no_vendible": spec.motivo_rechazo(lote),
+    }
 
 @app.get("/health", summary="Health Check")
 def health():

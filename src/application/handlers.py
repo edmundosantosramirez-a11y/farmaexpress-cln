@@ -79,3 +79,27 @@ class RetirarLoteHandler:
         lote.retirar(motivo)
         self.uow.lotes.guardar(lote)
         self.uow.commit()
+
+class PonerLoteEnCuarentenaHandler:
+    def __init__(self, uow: IUnitOfWork):
+        self.uow = uow
+
+    def ejecutar(self, id_lote: str):
+        lote = self.uow.lotes.obtener_por_id(id_lote)
+        if not lote:
+            raise ReglaDeNegocioExcepcion("Lote no encontrado.")
+        lote.poner_en_cuarentena()
+        self.uow.lotes.guardar(lote)
+        self.uow.commit()
+
+class LiberarCuarentenaHandler:
+    def __init__(self, uow: IUnitOfWork):
+        self.uow = uow
+
+    def ejecutar(self, id_lote: str):
+        lote = self.uow.lotes.obtener_por_id(id_lote)
+        if not lote:
+            raise ReglaDeNegocioExcepcion("Lote no encontrado.")
+        lote.liberar_cuarentena()
+        self.uow.lotes.guardar(lote)
+        self.uow.commit()
