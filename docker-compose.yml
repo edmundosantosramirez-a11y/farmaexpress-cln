@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: farmaexpress_api
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=production
+    restart: unless-stopped
+
+  tests:
+    build: .
+    container_name: farmaexpress_tests
+    command: pytest --cov=src tests/
+    environment:
+      - APP_ENV=testing
