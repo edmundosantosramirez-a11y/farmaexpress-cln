@@ -1,0 +1,43 @@
+class AgregarProductoHandler:
+    def __init__(self, uow: IUnitOfWork):
+        self.uow = uow
+
+    def ejecutar(self, id_venta: str, id_producto: str, cantidad: int,
+                 precio: Optional[float] = None, requiere_receta: Optional[bool] = None,
+                 fecha_actual: Optional[date] = None):
+        fecha_actual = fecha_actual or date.today()
+        venta = self.uow.ventas.obtener_por_id(id_venta)
+        if not venta:
+            raise ReglaDeNegocioExcepcion("Venta no encontrada.")
+
+        # El catálogo manda: precio y obligación de receta no los decide el cajero.
+        catalogo = getattr(self.uow, "productos", None)
+        producto = catalogo.obtener_por_id(id_producto) if catalogo is not None else None
+        if producto is not None:
+            precio = producto.precio
+            requiere_receta = producto.requiere_receta
+        elif precio is None:
+            raise ReglaDeNegocioExcepcion("Producto no registrado en el catálogo; indica el precio.")
+        requiere_receta = bool(requiere_receta)
+
+        lotes = self.uow.lotes.obtener_por_producto_y_sucursal(id_producto, venta.id_sucursal)
+        lote_fefo = EstrategiaFEFO.seleccionar_lote(lotes, cantidad, fecha_actual)
+
+        venta.agregar_linea(id_producto, lote_fefo.id_lote, cantidad, precio, requiere_receta)
+        self.uow.ventas.guardar(venta)
+        self.uow.commit()
+        return lote_fefo.id_lote
+
+
+# ----- Reemplaza también IniciarVentaHandler (evita pisar una venta existente, por ejemplo un ticket completado) -----
+class IniciarVentaHandler:
+    def __init__(self, uow: IUnitOfWork):
+        self.uow = uow
+
+    def ejecutar(self, id_venta: str, id_sucursal: str, id_cajero: str) -> str:
+        if self.uow.ventas.obtener_por_id(id_venta) is not None:
+            raise ReglaDeNegocioExcepcion("Ya existe una venta con ese id.")
+        venta = Venta(id_venta, id_sucursal, id_cajero)
+        self.uow.ventas.guardar(venta)
+        self.uow.commit()
+        return venta.id_venta

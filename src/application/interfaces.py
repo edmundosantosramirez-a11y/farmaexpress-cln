@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List
 from src.domain.lote import Lote
 from src.domain.venta import Venta
+from src.domain.producto import Producto
 
 class ILoteRepository(ABC):
     @abstractmethod
@@ -25,9 +26,19 @@ class IVentaRepository(ABC):
     def guardar(self, venta: Venta) -> None:
         pass
 
+class IProductoRepository(ABC):
+    @abstractmethod
+    def obtener_por_id(self, id_producto: str) -> Optional[Producto]:
+        pass
+
+    @abstractmethod
+    def guardar(self, producto: Producto) -> None:
+        pass
+
 class IUnitOfWork(ABC):
     ventas: IVentaRepository
     lotes: ILoteRepository
+    productos: IProductoRepository
 
     @abstractmethod
     def commit(self) -> None:
