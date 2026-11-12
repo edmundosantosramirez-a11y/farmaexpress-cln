@@ -1,10 +1,12 @@
 import os
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import StaleDataError
@@ -52,6 +54,16 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# CORS configurable por variable de entorno (12-Factor). Permite abrir la interfaz desde otro origen.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",") if o.strip()],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+INTERFAZ_HTML = Path(__file__).parent / "static" / "index.html"
 
 # ---------- Modo memoria (pruebas unitarias y ejecución sin base de datos) ----------
 repo_ventas = MemoriaVentaRepository()
@@ -235,6 +247,24 @@ def consultar_lote(id_lote: str, u: IUnitOfWork = Depends(get_uow)):
 
 @app.get("/health", summary="Health Check")
 def health():
+    return {"status": "ok"}
+
+
+@app.get("/info", summary="Información de despliegue (tipo de persistencia activa)")
+def info():
+    return {"persistencia": "postgresql" if USAR_DB else "memoria"}
+
+
+# ---------- Interfaz web para el usuario ----------
+@app.get("/", include_in_schema=False)
+def raiz():
+    return RedirectResponse(url="/app")
+
+
+@app.get("/app", include_in_schema=False)
+def interfaz():
+    """Interfaz web amigable (punto de venta e inventario) que consume esta misma API."""
+    return FileResponse(INTERFAZ_HTML, media_type="text/html")
     return {"status": "ok"}
 
 
