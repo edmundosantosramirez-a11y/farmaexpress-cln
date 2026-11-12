@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FarmaExpress · Punto de venta</title>
+<style>
+  :root {
+    --verde: #0f7b6c;
+    --verde-osc: #0a5c51;
+    --verde-claro: #e6f4f1;
+    --fondo: #f4f6f8;
+    --tarjeta: #ffffff;
+    --texto: #1f2933;
+    --suave: #616e7c;
+    --borde: #d9e2ec;
+    --rojo: #c62828;
+    --rojo-claro: #fdecea;
+    --ambar: #b26a00;
+    --ambar-claro: #fff4e0;
+    --gris-claro: #eef1f4;
+    --radio: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    font-size: 15px;
+  }
+  header {
+    background: var(--verde);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .marca { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    width: 40px; height: 40px; border-radius: 10px;
+    background: #fff; color: var(--verde);
+    display: grid; place-items: center;
+    font-weight: 800; font-size: 26px; line-height: 1;
+  }
+  .marca h1 { margin: 0; font-size: 20px; }
+  .marca small { opacity: .85; }
+  .estado-servidor {
+    background: rgba(255,255,255,.15);
+    padding: 6px 12px; border-radius: 999px; font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .punto { width: 9px; height: 9px; border-radius: 50%; background: #ccc; }
+  .punto.ok { background: #7dffb3; }
+  .punto.mal { background: #ff8a80; }
+
+  nav {
+    display: flex; gap: 4px; padding: 0 28px;
+    background: var(--tarjeta); border-bottom: 1px solid var(--borde);
+    overflow-x: auto;
+  }
+  nav button {
+    background: none; border: none; padding: 14px 18px;
+    font-size: 15px; color: var(--suave); cursor: pointer;
+    border-bottom: 3px solid transparent; white-space: nowrap;
+  }
+  nav button.activa { color: var(--verde); border-bottom-color: var(--verde); font-weight: 600; }
+
+  main { max-width: 1150px; margin: 0 auto; padding: 24px 20px 60px; }
+  .seccion { display: none; }
+  .seccion.activa { display: block; }
+
+  .rejilla { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+  @media (max-width: 860px) { .rejilla { grid-template-columns: 1fr; } }
+
+  .tarjeta {
+    background: var(--tarjeta); border: 1px solid var(--borde);
+    border-radius: var(--radio); padding: 20px; margin-bottom: 20px;
+  }
+  .tarjeta h2 { margin: 0 0 4px; font-size: 18px; }
+  .tarjeta .ayuda { color: var(--suave); margin: 0 0 16px; font-size: 14px; }
+
+  .paso {
+    display: inline-grid; place-items: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--verde); color: #fff; font-size: 13px; margin-right: 8px;
+  }
+  .bloqueada { opacity: .45; pointer-events: none; }
+
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--suave); }
+  input, select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--borde);
+    border-radius: 8px; font-size: 15px; background: #fff; color: var(--texto);
+  }
+  input:focus, select:focus { outline: 2px solid var(--verde-claro); border-color: var(--verde); }
+  .campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 14px; }
+
+  .btn {
+    border: none; border-radius: 8px; padding: 10px 18px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    background: var(--verde); color: #fff;
+  }
+  .btn:hover { background: var(--verde-osc); }
+  .btn:disabled { background: #a7b6c2; cursor: not-allowed; }
+  .btn.secundario { background: var(--gris-claro); color: var(--texto); }
+  .btn.secundario:hover { background: var(--borde); }
+  .btn.peligro { background: var(--rojo); }
+  .btn.ambar { background: var(--ambar); }
+  .btn.grande { width: 100%; padding: 14px; font-size: 17px; }
+  .fila-botones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .producto-info {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--gris-claro); border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; font-size: 14px;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--borde); font-size: 14px; }
+  th { color: var(--suave); font-weight: 600; font-size: 13px; }
+  td.num, th.num { text-align: right; }
+  .vacio { color: var(--suave); text-align: center; padding: 24px; }
+
+  .etiqueta {
+    display: inline-block; padding: 3px 9px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: .3px;
+  }
+  .e-verde { background: var(--verde-claro); color: var(--verde-osc); }
+  .e-ambar { background: var(--ambar-claro); color: var(--ambar); }
+  .e-rojo { background: var(--rojo-claro); color: var(--rojo); }
+  .e-gris { background: var(--gris-claro); color: var(--suave); }
+
+  .resumen { font-size: 15px; }
+  .resumen div { display: flex; justify-content: space-between; padding: 6px 0; }
+  .total { font-size: 26px; font-weight: 800; color: var(--verde); }
+
+  .aviso {
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; font-size: 14px;
+    background: var(--ambar-claro); color: #6b4200; border-left: 4px solid var(--ambar);
+  }
+  .aviso.ok { background: var(--verde-claro); color: var(--verde-osc); border-left-color: var(--verde); }
+
+  .lotes { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .lote h3 { margin: 0 0 2px; font-size: 16px; }
+  .lote .producto { color: var(--suave); font-size: 13px; margin-bottom: 12px; }
+  .lote .dato { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+  .lote .motivo { font-size: 13px; color: var(--rojo); margin: 8px 0; min-height: 18px; }
+  .lote .acciones { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .lote .acciones .btn { padding: 7px 12px; font-size: 13px; }
+  .retiro { display: none; margin-top: 10px; }
+  .retiro.visible { display: block; }
+  .retiro input { margin-bottom: 8px; }
+
+  .ticket {
+    max-width: 380px; margin: 0 auto; background: #fff;
+    border: 1px dashed #9aa5b1; padding: 22px; font-family: "Courier New", monospace; font-size: 14px;
+  }
+  .ticket h3 { text-align: center; margin: 0; }
+  .ticket .centro { text-align: center; }
+  .ticket hr { border: none; border-top: 1px dashed #9aa5b1; margin: 12px 0; }
+  .ticket .linea { display: flex; justify-content: space-between; gap: 8px; }
+
+  #avisos { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 10; max-width: 380px; }
+  .toast {
+    background: #fff; border-radius: 10px; padding: 12px 16px; font-size: 14px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.15); border-left: 5px solid var(--verde);
+    animation: entra .2s ease-out;
+  }
+  .toast.error { border-left-color: var(--rojo); }
+  .toast strong { display: block; margin-bottom: 2px; }
+  @keyframes entra { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .modal-fondo {
+    position: fixed; inset: 0; background: rgba(15, 23, 32, .5);
+    display: none; place-items: center; z-index: 20; padding: 20px;
+  }
+  .modal-fondo.visible { display: grid; }
+  .modal { background: var(--fondo); border-radius: var(--radio); padding: 24px; width: 100%; max-width: 440px; }
+
+  @media print {
+    header, nav, main, #avisos, .modal .fila-botones { display: none !important; }
+    .modal-fondo { position: static; background: none; display: block !important; }
+    .modal { background: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="marca">
+    <div class="logo">+</div>
+    <div>
+      <h1>FarmaExpress</h1>
+      <small>Punto de venta y control de lotes</small>
+    </div>
+  </div>
+  <div class="estado-servidor" title="Estado de la conexión con el servidor">
+    <span class="punto" id="puntoServidor"></span>
+    <span id="textoServidor">Conectando…</span>
+  </div>
+</header>
+
+<nav>
+  <button class="activa" data-seccion="venta">🛒 Nueva venta</button>
+  <button data-seccion="inventario">📦 Inventario de lotes</button>
+  <button data-seccion="consulta">🧾 Consultar venta</button>
+</nav>
+
+<main>
+  <!-- ================= NUEVA VENTA ================= -->
+  <section class="seccion activa" id="venta">
+    <div class="rejilla">
+      <div>
+        <div class="tarjeta" id="tarjetaIniciar">
+          <h2><span class="paso">1</span>Abrir venta</h2>
+          <p class="ayuda">Indica la sucursal y el cajero. El número de venta se genera solo.</p>
+          <div class="campos">
+            <div>
+              <label for="idSucursal">Sucursal</label>
+              <input id="idSucursal" value="SUC-MTY-01">
+            </div>
+            <div>
+              <label for="idCajero">Cajero</label>
+              <input id="idCajero" value="CAJ-001">
+            </div>
+          </div>
+          <button class="btn" id="btnIniciar">Abrir venta</button>
+          <span id="ventaActualTexto" style="margin-left:12px;color:var(--suave)"></span>
+        </div>
+
+        <div class="tarjeta bloqueada" id="tarjetaProductos">
+          <h2><span class="paso">2</span>Agregar productos</h2>
+          <p class="ayuda">El sistema elige solo el lote que caduca primero (FEFO) y no vende lotes caducados, en cuarentena o retirados.</p>
+          <div class="campos">
+            <div style="grid-column: span 2">
+              <label for="producto">Producto</label>
+              <select id="producto"></select>
+            </div>
+            <div>
+              <label for="cantidad">Cantidad</label>
+              <input id="cantidad" type="number" min="1" value="1">
+            </div>
+          </div>
+          <div class="producto-info" id="productoInfo"></div>
+          <button class="btn" id="btnAgregar">Agregar a la venta</button>
+        </div>
+
+        <div class="tarjeta bloqueada" id="tarjetaReceta">
+          <h2><span class="paso">3</span>Receta médica</h2>
+          <p class="ayuda">Solo es obligatoria si la venta incluye un medicamento controlado.</p>
+          <div id="avisoReceta" class="aviso" style="display:none"></div>
+          <div class="campos">
+            <div>
+              <label for="folio">Folio de la receta</label>
+              <input id="folio" placeholder="Ej. RX-2026-0458">
+            </div>
+            <div>
+              <label for="cedula">Cédula profesional</label>
+              <input id="cedula" placeholder="Mínimo 6 caracteres">
+            </div>
+            <div style="grid-column: 1 / -1">
+              <label for="medico">Nombre del médico</label>
+              <input id="medico" placeholder="Ej. Dra. Laura Treviño">
+            </div>
+          </div>
+          <button class="btn secundario" id="btnReceta">Registrar receta</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="tarjeta">
+          <h2>Venta actual</h2>
+          <p class="ayuda" id="estadoVentaTexto">Todavía no hay una venta abierta.</p>
+          <table>
+            <thead>
+              <tr><th>Producto</th><th>Lote</th><th class="num">Cant.</th><th class="num">Importe</th></tr>
+            </thead>
+            <tbody id="tablaLineas">
+              <tr><td colspan="4" class="vacio">Sin productos</td></tr>
+            </tbody>
+          </table>
+          <div class="resumen" style="margin-top:14px">
+            <div><span>Artículos</span><span id="numArticulos">0</span></div>
+            <div><span>Receta</span><span id="recetaEstado"><span class="etiqueta e-gris">No requerida</span></span></div>
+            <div style="align-items:center"><span>Total</span><span class="total" id="totalVenta">$0.00</span></div>
+          </div>
+          <button class="btn grande" id="btnCobrar" disabled style="margin-top:12px">Cobrar y generar ticket</button>
+          <button class="btn secundario grande" id="btnNueva" style="margin-top:8px;display:none">Empezar otra venta</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= INVENTARIO ================= -->
+  <section class="seccion" id="inventario">
+    <div class="tarjeta">
+      <h2>Inventario de lotes</h2>
+      <p class="ayuda">Revisa la caducidad y el estado de cada lote. Pon en cuarentena un lote sospechoso o retíralo por alerta sanitaria.</p>
+      <div class="campos" style="max-width:520px">
+        <div>
+          <label for="buscarLote">Buscar otro lote por clave</label>
+          <input id="buscarLote" placeholder="Ej. LOTE-001">
+        </div>
+        <div style="align-self:end">
+          <button class="btn secundario" id="btnBuscarLote">Buscar</button>
+          <button class="btn secundario" id="btnRefrescar">↻ Actualizar</button>
+        </div>
+      </div>
+    </div>
+    <div class="lotes" id="listaLotes"></div>
+  </section>
+
+  <!-- ================= CONSULTA ================= -->
+  <section class="seccion" id="consulta">
+    <div class="tarjeta" style="max-width:560px">
+      <h2>Consultar una venta</h2>
+      <p class="ayuda">Escribe el número de venta para ver su estado y su ticket.</p>
+      <div class="campos">
+        <div>
+          <label for="buscarVenta">Número de venta</label>
+          <input id="buscarVenta" placeholder="Ej. V-20261112-0930">
+        </div>
+        <div style="align-self:end"><button class="btn" id="btnBuscarVenta">Consultar</button></div>
+      </div>
+      <div id="historial"></div>
+    </div>
+    <div id="resultadoVenta"></div>
+  </section>
+</main>
+
+<!-- Ticket -->
+<div class="modal-fondo" id="modalTicket">
+  <div class="modal">
+    <div id="contenidoTicket"></div>
+    <div class="fila-botones" style="margin-top:16px;justify-content:center">
+      <button class="btn secundario" onclick="window.print()">🖨 Imprimir</button>
+      <button class="btn" id="btnCerrarTicket">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="avisos"></div>
+
+<script>
+// ------------------------------------------------------------
+// Configuración
+// ------------------------------------------------------------
+// Si la página la sirve la propia API (/app) se usa el mismo servidor.
+// Si se abre el archivo directamente, se usa el despliegue de Render.
+const API = location.protocol === "file:"
+  ? "https://farmaexpress-api-g3on.onrender.com"
+  : "";
+
+// La API no expone un endpoint de catálogo; estos son los productos de los datos de demostración (seed.py).
+const CATALOGO = [
+  { id: "PARACETAMOL-500", nombre: "Paracetamol 500 mg", precio: 35.0, receta: false },
+  { id: "CLONAZEPAM-2MG",  nombre: "Clonazepam 2 mg",    precio: 180.0, receta: true  },
+];
+const LOTES_CONOCIDOS = ["LOTE-001", "LOTE-002", "LOTE-CTRL"];
+
+const estado = { idVenta: null, lineas: [], recetaRegistrada: false, completada: false };
+const lotesVisibles = new Set(LOTES_CONOCIDOS);
+const historial = [];
+
+// ------------------------------------------------------------
+// Utilidades
+// ------------------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const dinero = (n) => "$" + Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const nombreProducto = (id) => (CATALOGO.find(p => p.id === id) || {}).nombre || id;
+const escapar = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function avisar(titulo, texto, tipo = "ok") {
+  const div = document.createElement("div");
+  div.className = "toast" + (tipo === "error" ? " error" : "");
+  div.innerHTML = `<strong>${escapar(titulo)}</strong>${escapar(texto || "")}`;
+  $("avisos").appendChild(div);
+  setTimeout(() => div.remove(), tipo === "error" ? 7000 : 4000);
+}
+
+async function llamar(metodo, ruta, cuerpo) {
+  let resp;
+  try {
+    resp = await fetch(API + ruta, {
+      method: metodo,
+      headers: cuerpo ? { "Content-Type": "application/json" } : {},
+      body: cuerpo ? JSON.stringify(cuerpo) : undefined,
+    });
+  } catch (e) {
+    throw new Error("No se pudo conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.");
+  }
+  let datos = {};
+  try { datos = await resp.json(); } catch (_) {}
+  if (!resp.ok) {
+    let msg = datos.detail;
+    if (Array.isArray(msg)) msg = "Revisa los datos capturados: hay campos vacíos o con formato incorrecto.";
+    throw new Error(msg || `Error del servidor (${resp.status}).`);
+  }
+  return datos;
+}
+
+function conBoton(boton, tarea) {
+  return async () => {
+    const texto = boton.textContent;
+    boton.disabled = true;
+    boton.textContent = "Procesando…";
+    try { await tarea(); }
+    catch (e) { avisar("No se pudo completar", e.message, "error"); }
+    finally { boton.disabled = false; boton.textContent = texto; actualizarBotonCobrar(); }
+  };
+}
+
+function nuevoIdVenta() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return `V-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+
+// ------------------------------------------------------------
+// Navegación
+// ------------------------------------------------------------
+document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("activa", x === b));
+  document.querySelectorAll(".seccion").forEach(s => s.classList.toggle("activa", s.id === b.dataset.seccion));
+  if (b.dataset.seccion === "inventario") cargarLotes();
+}));
+
+// ------------------------------------------------------------
+// Estado del servidor
+// ------------------------------------------------------------
+async function revisarServidor() {
+  try {
+    await llamar("GET", "/health");
+    let persistencia = "";
+    try { persistencia = (await llamar("GET", "/info")).persistencia; } catch (_) {}
+    $("puntoServidor").className = "punto ok";
+    $("textoServidor").textContent = "En línea" + (persistencia ? ` · ${persistencia === "postgresql" ? "PostgreSQL" : "memoria"}` : "");
+  } catch (_) {
+    $("puntoServidor").className = "punto mal";
+    $("textoServidor").textContent = "Sin conexión (el servidor puede estar despertando)";
+    setTimeout(revisarServidor, 8000);
+  }
+}
+
+// ------------------------------------------------------------
+// Venta
+// ------------------------------------------------------------
+function llenarProductos() {
+  $("producto").innerHTML = CATALOGO.map(p =>
+    `<option value="${p.id}">${p.nombre} — ${dinero(p.precio)}${p.receta ? " (requiere receta)" : ""}</option>`
+  ).join("");
+  mostrarInfoProducto();
+}
+
+function mostrarInfoProducto() {
+  const p = CATALOGO.find(x => x.id === $("producto").value);
+  $("productoInfo").innerHTML = `
+    <span>Precio unitario: <strong>${dinero(p.precio)}</strong></span>
+    ${p.receta ? '<span class="etiqueta e-ambar">CONTROLADO · REQUIERE RECETA</span>' : '<span class="etiqueta e-verde">VENTA LIBRE</span>'}`;
+}
+
+function requiereReceta() { return estado.lineas.some(l => l.requiere_receta); }
+
+function pintarVenta() {
+  const cuerpo = $("tablaLineas");
+  if (!estado.lineas.length) {
+    cuerpo.innerHTML = '<tr><td colspan="4" class="vacio">Sin productos</td></tr>';
+  } else {
+    cuerpo.innerHTML = estado.lineas.map(l => `
+      <tr>
+        <td>${escapar(nombreProducto(l.id_producto))}${l.requiere_receta ? ' <span class="etiqueta e-ambar">Rx</span>' : ""}</td>
+        <td><span class="etiqueta e-gris">${escapar(l.id_lote)}</span></td>
+        <td class="num">${l.cantidad}</td>
+        <td class="num">${dinero(l.cantidad * l.precio_unitario)}</td>
+      </tr>`).join("");
+  }
+  const total = estado.lineas.reduce((s, l) => s + l.cantidad * l.precio_unitario, 0);
+  $("totalVenta").textContent = dinero(total);
+  $("numArticulos").textContent = estado.lineas.reduce((s, l) => s + l.cantidad, 0);
+
+  let etiqueta = '<span class="etiqueta e-gris">No requerida</span>';
+  if (requiereReceta()) etiqueta = estado.recetaRegistrada
+    ? '<span class="etiqueta e-verde">Registrada</span>'
+    : '<span class="etiqueta e-rojo">Pendiente</span>';
+  else if (estado.recetaRegistrada) etiqueta = '<span class="etiqueta e-verde">Registrada</span>';
+  $("recetaEstado").innerHTML = etiqueta;
+
+  const aviso = $("avisoReceta");
+  if (requiereReceta() && !estado.recetaRegistrada) {
+    aviso.style.display = "block"; aviso.className = "aviso";
+    aviso.textContent = "Esta venta incluye un medicamento controlado. Captura los datos de la receta antes de cobrar.";
+  } else if (estado.recetaRegistrada) {
+    aviso.style.display = "block"; aviso.className = "aviso ok";
+    aviso.textContent = "Receta registrada correctamente.";
+  } else {
+    aviso.style.display = "none";
+  }
+
+  $("estadoVentaTexto").innerHTML = estado.idVenta
+    ? `Venta <strong>${escapar(estado.idVenta)}</strong> · ${estado.completada
+        ? '<span class="etiqueta e-verde">COMPLETADA</span>'
+        : '<span class="etiqueta e-ambar">ABIERTA</span>'}`
+    : "Todavía no hay una venta abierta.";
+  actualizarBotonCobrar();
+}
+
+function actualizarBotonCobrar() {
+  const b = $("btnCobrar");
+  if (b.textContent === "Procesando…") return;
+  // Se deja cobrar aunque falte la receta: el servidor aplica la regla y explica el rechazo.
+  b.disabled = !estado.idVenta || estado.completada || !estado.lineas.length;
+}
+
+function bloquearPasos(abierta) {
+  $("tarjetaProductos").classList.toggle("bloqueada", !abierta);
+  $("tarjetaReceta").classList.toggle("bloqueada", !abierta);
+  $("tarjetaIniciar").classList.toggle("bloqueada", abierta);
+}
+
+$("btnIniciar").addEventListener("click", conBoton($("btnIniciar"), async () => {
+  const sucursal = $("idSucursal").value.trim();
+  const cajero = $("idCajero").value.trim();
+  if (!sucursal || !cajero) throw new Error("Escribe la sucursal y el cajero.");
+  const id = nuevoIdVenta();
+  const r = await llamar("POST", "/ventas", { id_venta: id, id_sucursal: sucursal, id_cajero: cajero });
+  Object.assign(estado, { idVenta: r.id_venta || id, lineas: [], recetaRegistrada: false, completada: false });
+  $("ventaActualTexto").textContent = "Venta " + estado.idVenta;
+  bloquearPasos(true);
+  pintarVenta();
+  avisar("Venta abierta", `Número de venta: ${estado.idVenta}`);
+}));
+
+$("btnAgregar").addEventListener("click", conBoton($("btnAgregar"), async () => {
+  const p = CATALOGO.find(x => x.id === $("producto").value);
+  const cantidad = parseInt($("cantidad").value, 10);
+  if (!cantidad || cantidad < 1) throw new Error("La cantidad debe ser al menos 1.");
+  const r = await llamar("POST", `/ventas/${encodeURIComponent(estado.idVenta)}/productos`, { id_producto: p.id, cantidad, precio_unitario: p.precio, requiere_receta: p.receta });
+  await refrescarVentaDesdeServidor();
+  avisar("Producto agregado", `${p.nombre} ×${cantidad} · se despachó del lote ${r.lote_despachado}`);
+  $("cantidad").value = 1;
+}));
+
+$("btnReceta").addEventListener("click", conBoton($("btnReceta"), async () => {
+  const folio = $("folio").value.trim(), cedula = $("cedula").value.trim(), medico = $("medico").value.trim();
+  if (!folio || !cedula || !medico) throw new Error("Completa folio, cédula y nombre del médico.");
+  await llamar("POST", `/ventas/${encodeURIComponent(estado.idVenta)}/receta`, { folio, cedula_medico: cedula, nombre_medico: medico });
+  estado.recetaRegistrada = true;
+  pintarVenta();
+  avisar("Receta registrada", `Folio ${folio}`);
+}));
+
+$("btnCobrar").addEventListener("click", conBoton($("btnCobrar"), async () => {
+  await llamar("POST", `/ventas/${encodeURIComponent(estado.idVenta)}/completar`);
+  const venta = await refrescarVentaDesdeServidor();
+  estado.completada = true;
+  bloquearPasos(false);
+  $("tarjetaIniciar").classList.add("bloqueada");
+  $("btnNueva").style.display = "block";
+  pintarVenta();
+  historial.unshift(estado.idVenta);
+  pintarHistorial();
+  mostrarTicket(venta);
+  avisar("Venta completada", `Total cobrado: ${dinero(venta.total)}`);
+}));
+
+$("btnNueva").addEventListener("click", () => {
+  Object.assign(estado, { idVenta: null, lineas: [], recetaRegistrada: false, completada: false });
+  ["folio", "cedula", "medico"].forEach(id => $(id).value = "");
+  $("ventaActualTexto").textContent = "";
+  $("btnNueva").style.display = "none";
+  bloquearPasos(false);
+  pintarVenta();
+});
+
+async function refrescarVentaDesdeServidor() {
+  const v = await llamar("GET", `/ventas/${encodeURIComponent(estado.idVenta)}`);
+  estado.lineas = v.lineas;
+  estado.recetaRegistrada = v.receta_registrada;
+  estado.completada = v.estado === "COMPLETADA";
+  pintarVenta();
+  return v;
+}
+
+// ------------------------------------------------------------
+// Ticket
+// ------------------------------------------------------------
+function htmlTicket(v) {
+  const lineas = v.lineas.map(l => `
+    <div class="linea"><span>${escapar(nombreProducto(l.id_producto))}</span><span>${dinero(l.cantidad * l.precio_unitario)}</span></div>
+    <div style="color:#666;font-size:12px;margin-bottom:6px">${l.cantidad} × ${dinero(l.precio_unitario)} · Lote ${escapar(l.id_lote)}</div>`).join("");
+  return `
+    <div class="ticket">
+      <h3>FarmaExpress</h3>
+      <div class="centro">Ticket de venta</div>
+      <hr>
+      <div>Venta: ${escapar(v.id_venta)}</div>
+      <div>Fecha: ${new Date().toLocaleString("es-MX")}</div>
+      <div>Estado: ${escapar(v.estado)}</div>
+      <hr>
+      ${lineas || "<div>Sin productos</div>"}
+      <hr>
+      <div class="linea" style="font-weight:bold;font-size:16px"><span>TOTAL</span><span>${dinero(v.total)}</span></div>
+      ${v.receta_registrada ? "<div style='margin-top:8px'>Receta médica registrada ✔</div>" : ""}
+      <hr>
+      <div class="centro">¡Gracias por su compra!</div>
+    </div>`;
+}
+
+function mostrarTicket(v) {
+  $("contenidoTicket").innerHTML = htmlTicket(v);
+  $("modalTicket").classList.add("visible");
+}
+$("btnCerrarTicket").addEventListener("click", () => $("modalTicket").classList.remove("visible"));
+
+// ------------------------------------------------------------
+// Inventario de lotes
+// ------------------------------------------------------------
+function etiquetaEstadoLote(e) {
+  return { VIGENTE: "e-verde", CUARENTENA: "e-ambar", RETIRADO: "e-rojo" }[e] || "e-gris";
+}
+
+function diasRestantes(fecha) {
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  const f = new Date(fecha + "T00:00:00");
+  return Math.round((f - hoy) / 86400000);
+}
+
+function tarjetaLote(l) {
+  const dias = diasRestantes(l.fecha_caducidad);
+  const colorDias = dias < 0 ? "e-rojo" : dias <= 30 ? "e-rojo" : dias <= 90 ? "e-ambar" : "e-verde";
+  const textoDias = dias < 0 ? "Caducado" : `${dias} días`;
+  const producto = l.id_lote === "LOTE-CTRL" ? "CLONAZEPAM-2MG" : (l.id_lote.startsWith("LOTE-00") ? "PARACETAMOL-500" : null);
+  const id = escapar(l.id_lote);
+  return `
+    <div class="tarjeta lote" style="margin:0">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <h3>${id}</h3>
+        <span class="etiqueta ${etiquetaEstadoLote(l.estado)}">${escapar(l.estado)}</span>
+      </div>
+      <div class="producto">${producto ? escapar(nombreProducto(producto)) : "&nbsp;"}</div>
+      <div class="dato"><span>Existencia</span><strong>${l.stock} pzas</strong></div>
+      <div class="dato"><span>Caduca</span><span>${new Date(l.fecha_caducidad + "T00:00:00").toLocaleDateString("es-MX")}</span></div>
+      <div class="dato"><span>Tiempo restante</span><span class="etiqueta ${colorDias}">${textoDias}</span></div>
+      <div class="dato"><span>¿Se puede vender hoy?</span>${l.vendible ? '<span class="etiqueta e-verde">Sí</span>' : '<span class="etiqueta e-rojo">No</span>'}</div>
+      <div class="motivo">${l.motivo_no_vendible ? "⚠ " + escapar(l.motivo_no_vendible) : ""}</div>
+      <div class="acciones">
+        ${l.estado === "VIGENTE" ? `<button class="btn ambar" data-accion="cuarentena" data-lote="${id}">Poner en cuarentena</button>` : ""}
+        ${l.estado === "CUARENTENA" ? `<button class="btn" data-accion="liberar" data-lote="${id}">Liberar</button>` : ""}
+        ${l.estado !== "RETIRADO" ? `<button class="btn peligro" data-accion="mostrar-retiro" data-lote="${id}">Retirar</button>` : ""}
+      </div>
+      <div class="retiro" id="retiro-${id}">
+        <label>Motivo del retiro</label>
+        <input placeholder="Ej. Alerta sanitaria COFEPRIS" id="motivo-${id}">
+        <div class="fila-botones">
+          <button class="btn peligro" data-accion="retirar" data-lote="${id}">Confirmar retiro</button>
+          <button class="btn secundario" data-accion="cancelar-retiro" data-lote="${id}">Cancelar</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function cargarLotes() {
+  const cont = $("listaLotes");
+  cont.innerHTML = '<div class="tarjeta vacio">Cargando lotes…</div>';
+  const resultados = await Promise.all([...lotesVisibles].map(id =>
+    llamar("GET", `/lotes/${encodeURIComponent(id)}`).catch(() => null)));
+  const lotes = resultados.filter(Boolean);
+  cont.innerHTML = lotes.length ? lotes.map(tarjetaLote).join("") : '<div class="tarjeta vacio">No se encontraron lotes.</div>';
+}
+
+$("listaLotes").addEventListener("click", async (ev) => {
+  const b = ev.target.closest("button[data-accion]");
+  if (!b) return;
+  const lote = b.dataset.lote, accion = b.dataset.accion;
+  if (accion === "mostrar-retiro") { $("retiro-" + lote).classList.add("visible"); return; }
+  if (accion === "cancelar-retiro") { $("retiro-" + lote).classList.remove("visible"); return; }
+  b.disabled = true;
+  try {
+    if (accion === "cuarentena") await llamar("POST", `/lotes/${encodeURIComponent(lote)}/cuarentena`);
+    if (accion === "liberar") await llamar("POST", `/lotes/${encodeURIComponent(lote)}/liberar`);
+    if (accion === "retirar") {
+      const motivo = $("motivo-" + lote).value.trim();
+      if (!motivo) throw new Error("Escribe el motivo del retiro.");
+      await llamar("POST", `/lotes/${encodeURIComponent(lote)}/retirar`, { motivo });
+    }
+    const textos = { cuarentena: "quedó en cuarentena", liberar: "fue liberado", retirar: "fue retirado del mercado" };
+    avisar("Lote actualizado", `${lote} ${textos[accion]}.`);
+    await cargarLotes();
+  } catch (e) {
+    avisar("No se pudo actualizar el lote", e.message, "error");
+    b.disabled = false;
+  }
+});
+
+$("btnRefrescar").addEventListener("click", cargarLotes);
+$("btnBuscarLote").addEventListener("click", conBoton($("btnBuscarLote"), async () => {
+  const id = $("buscarLote").value.trim().toUpperCase();
+  if (!id) throw new Error("Escribe la clave del lote.");
+  await llamar("GET", `/lotes/${encodeURIComponent(id)}`);
+  lotesVisibles.add(id);
+  $("buscarLote").value = "";
+  await cargarLotes();
+}));
+
+// ------------------------------------------------------------
+// Consulta de ventas
+// ------------------------------------------------------------
+function pintarHistorial() {
+  $("historial").innerHTML = historial.length
+    ? '<label style="margin-top:6px">Ventas de esta sesión</label><div class="fila-botones">' +
+      historial.map(id => `<button class="btn secundario" data-venta="${escapar(id)}" style="font-size:13px;padding:6px 10px">${escapar(id)}</button>`).join("") +
+      "</div>"
+    : "";
+}
+$("historial").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button[data-venta]");
+  if (b) { $("buscarVenta").value = b.dataset.venta; $("btnBuscarVenta").click(); }
+});
+
+$("btnBuscarVenta").addEventListener("click", conBoton($("btnBuscarVenta"), async () => {
+  const id = $("buscarVenta").value.trim();
+  if (!id) throw new Error("Escribe el número de venta.");
+  try {
+    const v = await llamar("GET", `/ventas/${encodeURIComponent(id)}`);
+    $("resultadoVenta").innerHTML = htmlTicket(v);
+  } catch (e) {
+    $("resultadoVenta").innerHTML = "";
+    throw e;
+  }
+}));
+
+// ------------------------------------------------------------
+// Inicio
+// ------------------------------------------------------------
+$("producto").addEventListener("change", mostrarInfoProducto);
+llenarProductos();
+pintarVenta();
+revisarServidor();
+</script>
+</body>
+</html>
